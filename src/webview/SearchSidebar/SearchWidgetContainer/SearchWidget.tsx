@@ -6,6 +6,7 @@ import { hasInitialRewrite, refreshResult, useSearchField } from '../../hooks/us
 import { acceptAllChanges, useSearchResult } from '../../hooks/useSearch'
 import { childPort } from '../../postMessage'
 import { LangSelect } from './LangSelect'
+import { RuleSelect } from './RuleSelect'
 import { SearchInput } from './SearchInput'
 
 const styles = stylex.create({
@@ -97,6 +98,7 @@ function SearchWidgetContainer() {
           focusOnWindowFocus
         />
         <LangSelect />
+        <RuleSelect />
         {isExpanded ? <ReplaceBar /> : null}
       </div>
     </div>

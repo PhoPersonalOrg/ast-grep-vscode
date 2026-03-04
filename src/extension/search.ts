@@ -1,8 +1,8 @@
 import spawn, { type Subprocess } from 'nano-spawn'
 import path from 'node:path'
-import { commands, type ExtensionContext, window, workspace } from 'vscode'
+import { commands, FileType, type ExtensionContext, Uri, window, workspace } from 'vscode'
 
-import type { DisplayResult, PatternQuery, SearchQuery, SgSearch, YAMLConfig } from '../types'
+import type { DisplayResult, PatternQuery, ProjectRule, SearchQuery, SgSearch, YAMLConfig } from '../types'
 import { parentPort, resolveBinary, streamedPromise } from './common'
 
 /**
@@ -250,3 +250,153 @@ function searchByCode() {
   commands.executeCommand('ast-grep.search.input.focus')
   parentPort.postMessage('searchByCode', { text })
 }
+
+// Parse the `ruleDirs` list from sgconfig.yml/yaml content
+function parseRuleDirs(content: string): string[] {
+  const dirs: string[] = []
+  const lines = content.split('\n')
+  let inRuleDirs = false
+  for (const line of lines) {
+    if (/^ruleDirs\s*:/.test(line)) {
+      inRuleDirs = true
+      continue
+    }
+    if (inRuleDirs) {
+      const match = line.match(/^\s+-\s+(.+)/)
+      if (match) {
+        dirs.push(match[1].trim())
+      } else if (/^[a-zA-Z]/.test(line)) {
+        break // new top-level YAML key: end of ruleDirs section
+      }
+    }
+  }
+  return dirs
+}
+
+// Extract the `id` field from a rule YAML file's content
+function extractRuleId(content: string): string | undefined {
+  const match = content.match(/^id:\s*(.+?)(?:\s*#.*)?$/m)
+  return match?.[1].trim()
+}
+
+/**
+ * Read project rules from sgconfig.yml and its ruleDirs.
+ */
+export async function readProjectRules(): Promise<ProjectRule[]> {
+  const workspaceFolders = workspace.workspaceFolders
+  if (!workspaceFolders || workspaceFolders.length === 0) {
+    return []
+  }
+
+  const root = workspaceFolders[0].uri
+  const configRelPath = workspace.getConfiguration('astGrep').get('configPath', '') || ''
+
+  // Try to read the config file
+  let configContent: string | undefined
+  const candidates = configRelPath ? [configRelPath] : ['sgconfig.yml', 'sgconfig.yaml']
+  for (const candidate of candidates) {
+    try {
+      const bytes = await workspace.fs.readFile(Uri.joinPath(root, candidate))
+      configContent = new TextDecoder().decode(bytes)
+      break
+    } catch {
+      // try next candidate
+    }
+  }
+
+  if (!configContent) {
+    return []
+  }
+
+  const ruleDirs = parseRuleDirs(configContent)
+  if (ruleDirs.length === 0) {
+    return []
+  }
+
+  const rules: ProjectRule[] = []
+  for (const dir of ruleDirs) {
+    const dirUri = Uri.joinPath(root, dir)
+    try {
+      const entries = await workspace.fs.readDirectory(dirUri)
+      for (const [name, type] of entries) {
+        if (type === FileType.File && (name.endsWith('.yml') || name.endsWith('.yaml'))) {
+          try {
+            const fileUri = Uri.joinPath(dirUri, name)
+            const bytes = await workspace.fs.readFile(fileUri)
+            const id = extractRuleId(new TextDecoder().decode(bytes))
+            if (id) {
+              rules.push({ id })
+            }
+          } catch {
+            // skip unreadable files
+          }
+        }
+      }
+    } catch {
+      // skip unreadable directories
+    }
+  }
+
+  return rules.sort((a, b) => a.id.localeCompare(b.id))
+}
+
+function buildProjectRuleCommand(ruleId: string, includeFile: string) {
+  if (!ruleId) {
+    return
+  }
+  const command = resolveBinary()
+  const uris = workspace.workspaceFolders?.map(i => i.uri?.fsPath) ?? []
+  const args = ['scan', '--json=stream', '--filter', ruleId]
+  const validIncludeFile = includeFile.split(',').filter(Boolean)
+  const hasGlobPattern = validIncludeFile.some(i => i.includes('*'))
+  if (hasGlobPattern) {
+    args.push(...validIncludeFile.map(i => `--globs=${i}`))
+  } else {
+    args.push(...validIncludeFile)
+  }
+  console.debug('scanning rule', ruleId, command, args)
+  // TODO: multi-workspaces support
+  return spawn(command, args, {
+    cwd: uris[0],
+  })
+}
+
+parentPort.onMessage('getProjectRules', async () => {
+  const rules = await readProjectRules()
+  parentPort.postMessage('loadProjectRules', { rules })
+})
+
+async function getScanRuleRes(
+  ruleId: string,
+  includeFile: string,
+  handlers: Handlers,
+) {
+  const proc = buildProjectRuleCommand(ruleId, includeFile)
+  if (proc) {
+    const childProc = await proc.nodeChildProcess
+    childProc.on('error', (error: Error) => {
+      console.debug('ast-grep CLI runs error')
+      handlers.onError(error)
+    })
+  }
+  return uniqueCommand(proc, handlers.onData)
+}
+
+parentPort.onMessage('scanRule', async payload => {
+  const onData = (ret: SgSearch[]) => {
+    parentPort.postMessage('searchResultStreaming', {
+      ...payload,
+      searchResult: ret.map(splitByHighLightToken),
+    })
+  }
+  await getScanRuleRes(payload.ruleId, payload.includeFile, {
+    onData,
+    onError(error) {
+      parentPort.postMessage('error', {
+        error,
+        ...payload,
+      })
+    },
+  })
+  parentPort.postMessage('searchEnd', payload)
+})

@@ -1,6 +1,6 @@
 import { VSCodeLink } from '@vscode/webview-ui-toolkit/react'
 import { memo } from 'react'
-import type { DisplayResult, SearchQuery } from '../../../types'
+import type { DisplayResult, ScanRuleQuery, SearchQuery } from '../../../types'
 
 const style = {
   color: 'var(--vscode-search-resultsInfoForeground)',
@@ -53,7 +53,14 @@ function EmptyYaml({ id }: { id: string | undefined }) {
   )
 }
 
-function Empty({ query }: { query: SearchQuery }) {
+function Empty({ query }: { query: SearchQuery | ScanRuleQuery }) {
+  if ('ruleId' in query) {
+    return (
+      <div style={style}>
+        No results found for project rule <code style={codeStyle}>{query.ruleId}</code>.
+      </div>
+    )
+  }
   if ('yaml' in query) {
     const id = /id:\s*([^,\n]+)/.exec(query.yaml)?.[1]
     return <EmptyYaml id={id} />
@@ -131,7 +138,7 @@ function Empty({ query }: { query: SearchQuery }) {
 }
 
 interface SearchProviderMessageProps {
-  query: SearchQuery
+  query: SearchQuery | ScanRuleQuery
   results: [string, DisplayResult[]][]
   error: Error | null
 }

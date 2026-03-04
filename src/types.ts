@@ -51,6 +51,15 @@ export type SearchQueryBasic = PatternhQueryBasic | YAMLQueryBasic
 
 export type SearchQuery = PatternQuery | YAMLQuery
 
+export interface ProjectRule {
+  id: string
+}
+
+export interface ScanRuleQuery {
+  ruleId: string
+  includeFile: string
+}
+
 export type SgSearch = {
   text: string
   range: RangeInfo
@@ -64,8 +73,8 @@ export interface ParentToChild {
   searchResultStreaming: {
     searchResult: DisplayResult[]
     id: number
-  } & SearchQuery
-  searchEnd: WithId<SearchQuery>
+  } & (SearchQuery | ScanRuleQuery)
+  searchEnd: WithId<SearchQuery | ScanRuleQuery>
   error: {
     id: number
     error: Error
@@ -84,6 +93,7 @@ export interface ParentToChild {
   searchByCode: { text: string }
   enableYAML: boolean
   searchByYAML: { text: string }
+  loadProjectRules: { rules: ProjectRule[] }
 }
 
 export interface Diff {
@@ -138,6 +148,8 @@ export interface ChildToParent {
       }[]
     } & SearchQueryBasic
   >
+  getProjectRules: Record<string, never>
+  scanRule: WithId<ScanRuleQuery>
 }
 
 export type Definition = {

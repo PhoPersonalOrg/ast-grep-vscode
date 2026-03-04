@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react'
-import { YAMLConfig } from '../../types'
+import { type ScanRuleQuery, YAMLConfig } from '../../types'
 import {
   childPort,
   commitChange,
@@ -20,7 +20,7 @@ const MOD = 1e9 + 7
 // maintain the latest search task id and callback
 let id = 0
 let grouped: [string, DisplayResult[]][] = []
-let queryInFlight: SearchQuery | YAMLConfig = {
+let queryInFlight: SearchQuery | YAMLConfig | ScanRuleQuery = {
   pattern: '',
   includeFile: '',
   rewrite: '',
@@ -71,6 +71,15 @@ function postSearch(searchQuery: SearchQuery) {
 export function postYAML(config: YAMLConfig) {
   id = (id + 1) % MOD
   childPort.postMessage('yaml', { id, ...config })
+  searching = true
+  hasStaleResult = true
+  searchError = null
+  notify()
+}
+
+export function postScanRule(ruleId: string, includeFile: string) {
+  id = (id + 1) % MOD
+  childPort.postMessage('scanRule', { id, ruleId, includeFile })
   searching = true
   hasStaleResult = true
   searchError = null
@@ -176,6 +185,9 @@ function getSnapshot() {
 }
 
 function queryHasRewrite() {
+  if ('ruleId' in queryInFlight) {
+    return false
+  }
   if ('yaml' in queryInFlight) {
     return /^fix:/m.test(queryInFlight.yaml)
   }
@@ -220,6 +232,9 @@ export function acceptChangeAndRefresh(args: {
     range: RangeInfo
   }[]
 }) {
+  if ('ruleId' in queryInFlight) {
+    return
+  }
   commitChange({
     id,
     ...queryInFlight,
@@ -228,6 +243,9 @@ export function acceptChangeAndRefresh(args: {
 }
 
 export function acceptFileChanges(filePath: string) {
+  if ('ruleId' in queryInFlight) {
+    return
+  }
   const diffs = grouped.find(g => g[0] === filePath)?.[1] || []
   commitChange({
     id,
@@ -244,6 +262,9 @@ export function acceptFileChanges(filePath: string) {
  * Replace all matches in the search results
  */
 export function acceptAllChanges() {
+  if ('ruleId' in queryInFlight) {
+    return
+  }
   const changes = grouped.map(([filePath, diffs]) => ({
     filePath,
     diffs: diffs.map(d => ({ replacement: d.replacement!, range: d.range })),
