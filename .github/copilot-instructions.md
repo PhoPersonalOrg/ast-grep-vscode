@@ -88,6 +88,7 @@ src/
    ```
 
 2. **Install project dependencies** (use pnpm only):
+   - On filesystems that don't support symlinks (e.g. exFAT), add a project `.npmrc` with `node-linker=hoisted` before running install.
    ```bash
    pnpm install
    ```

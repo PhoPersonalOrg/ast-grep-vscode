@@ -1,0 +1,10 @@
+id: vscode-contributed-commands
+language: json
+severity: hint
+message: "VSCode contributed command: $CMD"
+rule:
+  kind: object
+  has:
+    pattern: '"command": $CMD'
+  inside:
+    pattern: '"commands": [$$_]'
