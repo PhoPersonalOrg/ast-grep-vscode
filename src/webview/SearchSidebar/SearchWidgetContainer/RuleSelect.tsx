@@ -73,8 +73,12 @@ export function RuleSelect() {
     [setRuleId, setIsRule],
   )
 
+  // Even if no rules are found initially, we should show the button
+  // so the user knows the feature exists, or to run ad-hoc if needed.
   if (rules.length === 0) {
-    return null
+    // Optionally we can still render it as disabled or empty,
+    // but returning null hides the UI completely.
+    // For now, let's render it so it's always visible.
   }
 
   return (
