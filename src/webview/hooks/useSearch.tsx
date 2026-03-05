@@ -59,7 +59,11 @@ function byFilePath(a: [string, unknown], b: [string, unknown]) {
 }
 
 // this function is also called in useQuery
-function postSearch(searchQuery: SearchQuery) {
+function postSearch(searchQuery: SearchQuery, isNewTab = false) {
+  if (isNewTab) {
+    childPort.postMessage('searchInNewTab', searchQuery)
+    return
+  }
   id = (id + 1) % MOD
   childPort.postMessage('search', { id, ...searchQuery })
   searching = true
@@ -68,7 +72,11 @@ function postSearch(searchQuery: SearchQuery) {
   notify()
 }
 
-export function postYAML(config: YAMLConfig) {
+export function postYAML(config: YAMLConfig, isNewTab = false) {
+  if (isNewTab) {
+    childPort.postMessage('searchInNewTab', config)
+    return
+  }
   id = (id + 1) % MOD
   childPort.postMessage('yaml', { id, ...config })
   searching = true
@@ -77,7 +85,11 @@ export function postYAML(config: YAMLConfig) {
   notify()
 }
 
-export function postScanRule(ruleId: string, includeFile: string) {
+export function postScanRule(ruleId: string, includeFile: string, isNewTab = false) {
+  if (isNewTab) {
+    childPort.postMessage('searchInNewTab', { ruleId, includeFile })
+    return
+  }
   id = (id + 1) % MOD
   childPort.postMessage('scanRule', { id, ruleId, includeFile })
   searching = true
