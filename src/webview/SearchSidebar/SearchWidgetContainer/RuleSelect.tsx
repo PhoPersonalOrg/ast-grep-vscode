@@ -3,8 +3,6 @@ import { type ChangeEvent, useCallback, useState } from 'react'
 import { VscBook } from 'react-icons/vsc'
 import { useEffectOnce } from 'react-use'
 import type { ProjectRule } from '../../../types'
-import { useSearchField } from '../../hooks/useQuery'
-import { postScanRule } from '../../hooks/useSearch'
 import { childPort } from '../../postMessage'
 
 const styles = stylex.create({
@@ -53,10 +51,11 @@ const styles = stylex.create({
   },
 })
 
+import { useRuleConfig } from '../../hooks/useQuery'
+
 export function RuleSelect() {
   const [rules, setRules] = useState<ProjectRule[]>([])
-  const [selectedRule, setSelectedRule] = useState('')
-  const [includeFile] = useSearchField('includeFile')
+  const { isRule, setIsRule, ruleId, setRuleId } = useRuleConfig()
 
   useEffectOnce(() => {
     childPort.postMessage('getProjectRules', {})
@@ -67,13 +66,11 @@ export function RuleSelect() {
 
   const onChange = useCallback(
     (e: ChangeEvent<HTMLSelectElement>) => {
-      const ruleId = e.target.value
-      setSelectedRule(ruleId)
-      if (ruleId) {
-        postScanRule(ruleId, includeFile)
-      }
+      const newRuleId = e.target.value
+      setRuleId(newRuleId)
+      setIsRule(!!newRuleId)
     },
-    [includeFile],
+    [setRuleId, setIsRule],
   )
 
   if (rules.length === 0) {
@@ -82,16 +79,16 @@ export function RuleSelect() {
 
   return (
     <label
-      {...stylex.props(styles.ruleButton, selectedRule ? styles.ruleActive : null)}
-      title={selectedRule ? `Run rule: ${selectedRule}` : 'Run a project rule'}
+      {...stylex.props(styles.ruleButton, isRule ? styles.ruleActive : null)}
+      title={isRule ? `Selected rule: ${ruleId}` : 'Select a project rule'}
     >
       <select
         {...stylex.props(styles.ruleDropdown)}
-        value={selectedRule}
+        value={ruleId}
         onChange={onChange}
       >
         <option value="" {...stylex.props(styles.ruleOptions)}>
-          Select Project Rule
+          No Project Rule
         </option>
         {rules.map(r => (
           <option key={r.id} value={r.id} {...stylex.props(styles.ruleOptions)}>

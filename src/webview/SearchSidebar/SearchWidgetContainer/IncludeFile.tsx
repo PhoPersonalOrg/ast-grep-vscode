@@ -12,7 +12,7 @@ const titleStyle = {
 interface IncludeFileProps {
   includeFile: string
   setIncludeFile: (value: string) => void
-  refreshResult: () => void
+  refreshResult: (isShiftEnter?: boolean) => void
 }
 
 export default function IncludeFile({
@@ -28,7 +28,7 @@ export default function IncludeFile({
         placeholder="e.g. src, packages, src/**/*.ts"
         value={includeFile}
         onChange={setIncludeFile}
-        onKeyEnterUp={refreshResult}
+        onKeyEnterUp={shiftKey => refreshResult(shiftKey)}
       />
     </div>
   )

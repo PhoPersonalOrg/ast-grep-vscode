@@ -39,6 +39,11 @@ export type PatternQuery = PatternhQueryBasic & {
   includeFile: string
 }
 
+export type UIQuery = PatternQuery & {
+  isRule: boolean
+  ruleId: string
+}
+
 interface YAMLQueryBasic {
   yaml: string
 }
@@ -150,6 +155,7 @@ export interface ChildToParent {
   >
   getProjectRules: Record<string, never>
   scanRule: WithId<ScanRuleQuery>
+  searchInNewTab: SearchQuery | ScanRuleQuery
 }
 
 export type Definition = {

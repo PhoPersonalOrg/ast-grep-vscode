@@ -60,7 +60,7 @@ function ReplaceBar() {
         placeholder="Replace"
         value={rewrite}
         onChange={setRewrite}
-        onKeyEnterUp={refreshResult}
+        onKeyEnterUp={shiftKey => refreshResult(shiftKey)}
       />
       <VSCodeButton
         title="Replace All"
@@ -94,7 +94,7 @@ function SearchWidgetContainer() {
           placeholder="Search"
           value={pattern}
           onChange={setPattern}
-          onKeyEnterUp={refreshResult}
+          onKeyEnterUp={shiftKey => refreshResult(shiftKey)}
           focusOnWindowFocus
         />
         <LangSelect />
