@@ -1,8 +1,15 @@
 import spawn, { type Subprocess } from 'nano-spawn'
 import path from 'node:path'
-import { commands, FileType, type ExtensionContext, Uri, window, workspace } from 'vscode'
+import { commands, type ExtensionContext, FileType, Uri, window, workspace } from 'vscode'
 
-import type { DisplayResult, PatternQuery, ProjectRule, SearchQuery, SgSearch, YAMLConfig } from '../types'
+import type {
+  DisplayResult,
+  PatternQuery,
+  ProjectRule,
+  SearchQuery,
+  SgSearch,
+  YAMLConfig,
+} from '../types'
 import { parentPort, resolveBinary, streamedPromise } from './common'
 
 /**
@@ -252,7 +259,7 @@ parentPort.onMessage('searchInNewTab', async payload => {
 
     const document = await workspace.openTextDocument({
       content: JSON.stringify(results, null, 2),
-      language: 'json'
+      language: 'json',
     })
     await window.showTextDocument(document, { preview: false })
   } catch (e) {
