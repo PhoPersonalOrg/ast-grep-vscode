@@ -108,3 +108,4 @@ out
 .vscode-test
 *.vsix
 desktop.ini
+.specstory
