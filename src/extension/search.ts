@@ -1,8 +1,15 @@
 import spawn, { type Subprocess } from 'nano-spawn'
 import path from 'node:path'
-import { commands, FileType, type ExtensionContext, Uri, window, workspace } from 'vscode'
+import { commands, type ExtensionContext, FileType, Uri, window, workspace } from 'vscode'
 
-import type { DisplayResult, PatternQuery, ProjectRule, SearchQuery, SgSearch, YAMLConfig } from '../types'
+import type {
+  DisplayResult,
+  PatternQuery,
+  ProjectRule,
+  SearchQuery,
+  SgSearch,
+  YAMLConfig,
+} from '../types'
 import { parentPort, resolveBinary, streamedPromise } from './common'
 
 /**
@@ -221,6 +228,46 @@ parentPort.onMessage('search', async payload => {
   parentPort.postMessage('searchEnd', payload)
 })
 
+parentPort.onMessage('searchInNewTab', async payload => {
+  try {
+    let proc
+    if ('ruleId' in payload) {
+      proc = buildProjectRuleCommand(payload.ruleId, payload.includeFile)
+    } else if ('yaml' in payload) {
+      proc = buildYAMLCommand(payload as YAMLConfig)
+    } else {
+      proc = buildPatternCommand(payload as PatternQuery)
+    }
+
+    if (!proc) {
+      return
+    }
+
+    const results: SgSearch[] = []
+
+    const onData = (ret: SgSearch[]) => {
+      results.push(...ret)
+    }
+
+    // Do not use uniqueCommand so we don't kill ongoing searches in the sidebar
+    await streamedPromise(proc, onData)
+
+    if (results.length === 0) {
+      window.showInformationMessage('ast-grep: No results found.')
+      return
+    }
+
+    const document = await workspace.openTextDocument({
+      content: JSON.stringify(results, null, 2),
+      language: 'json',
+    })
+    await window.showTextDocument(document, { preview: false })
+  } catch (e) {
+    console.error('searchInNewTab error:', e)
+    window.showErrorMessage(`ast-grep failed to search in new tab: ${e}`)
+  }
+})
+
 parentPort.onMessage('yaml', async payload => {
   const onData = (ret: SgSearch[]) => {
     parentPort.postMessage('searchResultStreaming', {
@@ -314,8 +361,16 @@ export async function readProjectRules(): Promise<ProjectRule[]> {
   }
 
   const rules: ProjectRule[] = []
-  for (const dir of ruleDirs) {
-    const dirUri = Uri.joinPath(root, dir)
+  for (let dir of ruleDirs) {
+    // Convert posix-style paths from sgconfig into proper OS paths if necessary
+    dir = dir.replace(/[\\/]+/g, path.sep)
+    let dirUri: Uri
+    if (path.isAbsolute(dir)) {
+      dirUri = Uri.file(dir)
+    } else {
+      dirUri = Uri.joinPath(root, dir)
+    }
+
     try {
       const entries = await workspace.fs.readDirectory(dirUri)
       for (const [name, type] of entries) {

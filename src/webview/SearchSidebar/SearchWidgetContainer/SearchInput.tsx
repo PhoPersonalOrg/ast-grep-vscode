@@ -5,7 +5,7 @@ interface SearchInputProps {
   placeholder: string
   value: string
   onChange: (val: string) => void
-  onKeyEnterUp: () => void
+  onKeyEnterUp: (isShiftEnter?: boolean) => void
   isSingleLine?: boolean
   focusOnWindowFocus?: boolean
 }
@@ -88,9 +88,9 @@ const SearchInput = ({
   )
   const onKeyDown = useCallback(
     (event: React.KeyboardEvent) => {
-      if (event.key === 'Enter' && !event.shiftKey) {
+      if (event.key === 'Enter') {
         event.preventDefault()
-        onKeyEnterUp()
+        onKeyEnterUp(event.shiftKey)
       }
     },
     [onKeyEnterUp],
