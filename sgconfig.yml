@@ -1,4 +1,4 @@
 ruleDirs:
 - C:/Users/pho/repos/VSCode Extensions/ast-grep-vscode/.ast-grep/rules
 utilDirs:
-- C:/Users/pho/repos/VSCode Extensions/ast-grep-vscode/.ast-grep/rules
+- C:/Users/pho/repos/VSCode Extensions/ast-grep-vscode/.ast-grep/utils

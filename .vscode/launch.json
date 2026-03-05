@@ -6,7 +6,8 @@
       "request": "launch",
       "name": "Launch Client",
       "runtimeExecutable": "${execPath}",
-      "args": ["--extensionDevelopmentPath=${workspaceRoot}"],
+      "args": ["--profile=PhoExtensionDev2025", "--extensionDevelopmentPath=${workspaceRoot}", "H:\\TEMP\\Spike3DEnv_ExploreUpgrade\\Spike3DWorkEnv\\Spike3D",
+      ],
       "outFiles": ["${workspaceRoot}/client/out/**/*.js"],
       "preLaunchTask": {
         "type": "npm",

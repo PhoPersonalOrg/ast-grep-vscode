@@ -1,0 +1,5 @@
+id: test-util
+language: Bash
+rule:
+  pattern: Your Rule Pattern here...
+# utils: Extract repeated rule as local utility here.
